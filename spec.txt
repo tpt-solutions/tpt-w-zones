@@ -1,0 +1,8 @@
+Advanced Window Tiling & Workspace Manager (DisplayFusion / FancyZones Alternative)
+Concept: tpt-zones – A keyboard-driven, highly customizable window management tool.
+Tech Stack: Rust (for low-latency Windows API hooks, similar to komorebi) + TypeScript (for a visual zone editor).
+Why it’s better: PowerToys FancyZones is good but lacks deep automation. DisplayFusion is expensive and bloated. A Rust-native tiling manager can offer ultra-low latency, monitor-aware profiles, and scriptable layouts for power users, while remaining lightweight.
+
+Compatible on Windows, Linux and Archon. https://github.com/tpt-solutions/tpt-archon
+
+Linux & Archon Compatibility: Integrates with Linux desktop environments (GNOME/KDE via Wayland protocols). On Archon, window management is handled as a first-class user-space microkernel service, allowing scriptable, zero-latency layout enforcement via tpt-archon-bridge IPC.
