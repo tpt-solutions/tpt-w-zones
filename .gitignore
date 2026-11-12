@@ -11,8 +11,8 @@ build/
 *.tsbuildinfo
 
 # Tauri
-src-tauri/target/
-src-tauri/gen/
+**/src-tauri/target/
+**/src-tauri/gen/
 
 # Editors / OS
 .vscode/
