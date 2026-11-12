@@ -17,5 +17,8 @@ tauri = { version = "2", features = [] }
 serde.workspace = true
 zones-core = { path = "../../../crates/zones-core" }
 
+[target.'cfg(windows)'.dependencies]
+zones-win = { path = "../../../crates/zones-win" }
+
 [lints]
 workspace = true

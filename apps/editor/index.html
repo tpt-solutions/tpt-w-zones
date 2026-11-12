@@ -8,20 +8,36 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <main>
-      <h1>tpt-zones</h1>
-      <p class="muted">Visual zone editor — scaffold</p>
-      <dl id="app-info">
-        <dt>Version</dt>
-        <dd id="info-version">…</dd>
-        <dt>Platform</dt>
-        <dd id="info-platform">…</dd>
-        <dt>Config schema</dt>
-        <dd id="info-schema">…</dd>
-        <dt>IPC protocol</dt>
-        <dd id="info-protocol">…</dd>
-      </dl>
+    <header class="topbar">
+      <div class="brand">
+        <h1>tpt-zones</h1>
+        <span id="config-path" class="muted small"></span>
+      </div>
+      <div class="actions">
+        <button id="reload" type="button">Reload from disk</button>
+        <button id="revert" type="button" disabled>Revert</button>
+        <button id="save" type="button" class="primary" disabled>Save</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button id="tab-layouts" type="button" role="tab" aria-selected="true">Layouts</button>
+      <button id="tab-profiles" type="button" role="tab" aria-selected="false">Profiles</button>
+      <button id="tab-settings" type="button" role="tab" aria-selected="false">Settings</button>
+    </nav>
+
+    <div class="statusbar" aria-live="polite">
+      <span id="dirty" class="clean">All changes saved</span>
+      <span id="validation" class="notice ok">Configuration is valid.</span>
+      <span id="status" class="muted"></span>
+    </div>
+
+    <main id="view">
+      <section id="pane-layouts" role="tabpanel"></section>
+      <section id="pane-profiles" role="tabpanel" hidden></section>
+      <section id="pane-settings" role="tabpanel" hidden></section>
     </main>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -25,7 +25,7 @@
 //! ```
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -96,6 +96,20 @@ impl Default for Config {
             rules: Vec::new(),
         }
     }
+}
+
+/// Per-user configuration location: `%APPDATA%\tpt-zones\config.toml` on Windows, and
+/// `$XDG_CONFIG_HOME/tpt-zones/config.toml` (or `~/.config/...`) elsewhere.
+#[must_use]
+pub fn default_path() -> Option<PathBuf> {
+    let base = if cfg!(windows) {
+        std::env::var_os("APPDATA").map(PathBuf::from)
+    } else {
+        std::env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
+    };
+    base.map(|b| b.join("tpt-zones").join("config.toml"))
 }
 
 impl Config {

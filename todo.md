@@ -51,13 +51,13 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 4 — Visual Zone Editor (`apps/editor`, Tauri + TypeScript)
 
-- [ ] Build zone layout canvas (draw/resize/delete zones)
-- [ ] Build monitor-aware layout switching UI
-- [ ] Build save/load layout profile UI
+- [x] Build zone layout canvas (draw/resize/delete zones)
+- [x] Build monitor-aware layout switching UI
+- [x] Build save/load layout profile UI
 - [ ] Build live preview (highlight zones on real monitors)
-- [ ] Wire up Tauri commands/IPC to `zones-core`
-- [ ] Build settings screen (hotkeys, autostart, general preferences)
-- [ ] Add light/dark theme support
+- [x] Wire up Tauri commands/IPC to `zones-core`
+- [x] Build settings screen (hotkeys, autostart, general preferences)
+- [x] Add light/dark theme support
 - [ ] Package editor as a Tauri desktop app (Windows + Linux)
 
 ## Phase 5 — Automation & Scripting
