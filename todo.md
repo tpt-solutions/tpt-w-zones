@@ -40,7 +40,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 3 — Linux Backend (`zones-linux`, Wayland)
 
-- [ ] Research/prototype Wayland protocol integration (layer-shell, foreign-toplevel mgmt)
+- [ ] Research/prototype Wayland protocol integration (research notes: docs/linux-research.md; prototype pending) (layer-shell, foreign-toplevel mgmt)
 - [ ] Implement window enumeration & event subscription for GNOME (via extension/portal if needed)
 - [ ] Implement window enumeration & event subscription for KDE (via KWin scripting/protocol)
 - [ ] Implement global hotkey registration under Wayland constraints
@@ -65,13 +65,13 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [x] Design scriptable layout rules (per-app, per-monitor, per-profile)
 - [x] Implement rule engine in `zones-core`
 - [x] Build CLI for scripting/automation (`tpt-zones-cli`)
-- [ ] Build hotkey/keybinding customization UI
+- [x] Build hotkey/keybinding customization UI (text entry in the editor Settings tab; key capture not yet)
 - [x] Implement config import/export
 - [x] Document scripting API and examples
 
 ## Phase 6 — Archon Integration (`zones-archon-bridge`)
 
-- [ ] Study `tpt-archon` IPC interface (https://github.com/tpt-solutions/tpt-archon)
+- [x] Study `tpt-archon` IPC interface (findings: docs/archon-integration.md) (https://github.com/tpt-solutions/tpt-archon)
 - [ ] Implement `tpt-archon-bridge` IPC client crate
 - [ ] Implement zero-latency layout enforcement as an Archon user-space service
 - [ ] Package/deploy `zones-archon-bridge` for Archon
