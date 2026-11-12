@@ -4665,6 +4665,7 @@ dependencies = [
 name = "zones-cli"
 version = "0.1.0"
 dependencies = [
+ "tracing",
  "zones-core",
  "zones-win",
 ]

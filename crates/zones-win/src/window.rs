@@ -17,7 +17,7 @@ use windows::Win32::System::Threading::{
     OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetAncestor, GetClassNameW, GetWindowLongPtrW, GetWindowRect,
+    EnumWindows, GetAncestor, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect,
     GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible,
     SetWindowPos, ShowWindow, GA_ROOTOWNER, GWL_EXSTYLE, SWP_NOACTIVATE, SWP_NOZORDER, SW_RESTORE,
     WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
@@ -255,6 +255,14 @@ fn to_rect(r: RECT) -> Rect {
         u32::try_from(r.right - r.left).unwrap_or(0),
         u32::try_from(r.bottom - r.top).unwrap_or(0),
     )
+}
+
+/// Returns the window that currently has keyboard focus, if any.
+#[must_use]
+pub fn foreground() -> Option<WindowId> {
+    // SAFETY: GetForegroundWindow has no preconditions and returns null when no window is active.
+    let hwnd = unsafe { GetForegroundWindow() };
+    (!hwnd.0.is_null()).then(|| id_of(hwnd))
 }
 
 #[cfg(test)]

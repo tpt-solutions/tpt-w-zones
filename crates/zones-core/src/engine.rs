@@ -82,6 +82,50 @@ pub fn apply(
     Ok(applied)
 }
 
+/// Computes the rectangle for `zone` of `layout` on the monitor that holds `window`.
+///
+/// # Errors
+/// Returns [`Error::NotFound`] if the window, its monitor, the layout or the zone is unknown.
+pub fn snap_target(
+    config: &Config,
+    monitors: &[Monitor],
+    windows: &[WindowInfo],
+    window: WindowId,
+    layout: &str,
+    zone: &crate::model::ZoneId,
+) -> Result<Rect> {
+    let info = require_window(windows, window)?;
+    let monitor = info
+        .monitor
+        .and_then(|id| monitors.iter().find(|m| m.id == id))
+        .ok_or_else(|| Error::NotFound(format!("monitor for window {}", window.0)))?;
+    let layout_def = config
+        .layout(layout)
+        .ok_or_else(|| Error::NotFound(format!("layout '{layout}'")))?;
+    let zone_def = layout_def
+        .zone(zone)
+        .ok_or_else(|| Error::NotFound(format!("zone '{}' in layout '{layout}'", zone.0)))?;
+    Ok(zone_def.to_rect(monitor.work_area))
+}
+
+/// Snaps `window` into a zone and returns the rectangle it was placed at.
+///
+/// # Errors
+/// Returns an error if the window or zone cannot be resolved, or the move fails.
+pub fn snap(
+    backend: &dyn WindowBackend,
+    config: &Config,
+    window: WindowId,
+    layout: &str,
+    zone: &crate::model::ZoneId,
+) -> Result<Rect> {
+    let monitors = backend.monitors()?;
+    let windows = backend.windows()?;
+    let target = snap_target(config, &monitors, &windows, window, layout, zone)?;
+    backend.place(window, target)?;
+    Ok(target)
+}
+
 /// Verifies that a `Placement` refers to a window that is still known to the backend.
 ///
 /// # Errors
@@ -233,6 +277,28 @@ mod tests {
         assert_eq!(applied.len(), 1);
         assert_eq!(backend.moves.lock().unwrap().len(), 1);
         assert_eq!(backend.moves.lock().unwrap()[0].0, WindowId(1));
+    }
+
+    #[test]
+    fn snap_target_uses_the_windows_monitor_work_area() {
+        let cfg = config();
+        let mons = vec![monitor()];
+        let windows = vec![window(7, "notepad.exe", Rect::new(100, 100, 300, 300))];
+        let zone = ZoneId("right".into());
+        let target = snap_target(&cfg, &mons, &windows, WindowId(7), "halves", &zone).unwrap();
+        assert_eq!(target, Rect::new(500, 0, 500, 760));
+    }
+
+    #[test]
+    fn snap_target_reports_unknown_zone() {
+        let cfg = config();
+        let mons = vec![monitor()];
+        let windows = vec![window(7, "notepad.exe", Rect::new(0, 0, 1, 1))];
+        let zone = ZoneId("missing".into());
+        assert!(matches!(
+            snap_target(&cfg, &mons, &windows, WindowId(7), "halves", &zone),
+            Err(Error::NotFound(_))
+        ));
     }
 
     #[test]

@@ -14,6 +14,10 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod ctl;
+#[cfg(windows)]
+mod service;
+
 use zones_core::config::Config;
 use zones_core::{Error, Result};
 
@@ -24,11 +28,20 @@ usage:
   tpt-zones-cli export FILE
   tpt-zones-cli monitors
   tpt-zones-cli windows
-  tpt-zones-cli apply [FILE] [--profile PROFILE]";
+  tpt-zones-cli apply [FILE] [--profile PROFILE]
+  tpt-zones-cli serve [FILE]                run the service (hotkeys, rules, IPC)
+  tpt-zones-cli ctl ping|windows|monitors|reload|watch
+  tpt-zones-cli ctl snap WINDOW_ID LAYOUT ZONE";
 
 fn main() -> ExitCode {
-    zones_core::logging::init("warn");
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // The service logs its actions at info; one-shot commands stay quiet unless asked.
+    let default_level = if args.first().map(String::as_str) == Some("serve") {
+        "info"
+    } else {
+        "warn"
+    };
+    zones_core::logging::init(default_level);
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(Error::Config(msg)) if msg.starts_with("usage") => {
@@ -80,6 +93,8 @@ fn run(args: &[String]) -> Result<()> {
         }
         "monitors" => list_monitors(),
         "windows" => list_windows(),
+        "serve" => serve(rest),
+        "ctl" => ctl::run(rest),
         "apply" => {
             let (path, profile) = parse_apply_args(rest)?;
             let cfg = Config::load(&path)?;
@@ -226,6 +241,19 @@ fn list_windows() -> Result<()> {
 fn apply_rules(_cfg: &Config, _profile: Option<&str>) -> Result<()> {
     Err(Error::Backend(
         "no live backend for this platform yet".into(),
+    ))
+}
+
+#[cfg(windows)]
+fn serve(rest: &[String]) -> Result<()> {
+    let path = optional_path(rest)?;
+    service::run(path)
+}
+
+#[cfg(not(windows))]
+fn serve(_rest: &[String]) -> Result<()> {
+    Err(Error::Backend(
+        "the service runs on Windows only for now".into(),
     ))
 }
 

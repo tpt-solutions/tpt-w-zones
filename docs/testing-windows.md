@@ -72,3 +72,18 @@ CLI with a config that has rules for at least two apps.
 
 - [ ] Placing a window that closed a moment earlier returns an error, and the other windows in the batch still move.
 - [ ] Killing a window's process while it is being tracked does not crash the event thread.
+
+### Service and IPC
+
+Run these with a scratch config whose only rule matches an app you can open and close
+freely (for example Notepad). Do not use your real config, because `serve` applies its rules
+at startup and moves matching windows.
+
+- [ ] `tpt-zones-cli serve SCRATCH.toml` starts, logs each hotkey as registered, and logs the startup rule count.
+- [ ] `tpt-zones-cli ctl ping` succeeds while the service runs, and fails with a clear message after it stops.
+- [ ] Opening a new Notepad window places it by the rule within about one second.
+- [ ] `tpt-zones-cli ctl snap WINDOW_ID LAYOUT ZONE` moves the window, and an unknown zone returns an error with exit code 1.
+- [ ] `tpt-zones-cli ctl reload` succeeds. A config with a syntax error leaves the running configuration in place.
+- [ ] `tpt-zones-cli ctl watch` prints created, moved and focused events as they happen.
+- [ ] Each configured hotkey runs its action from any application, and a combination owned by another app is logged as not registered.
+- [ ] A client that sends a bad handshake gets an error response, and the service keeps serving other clients.

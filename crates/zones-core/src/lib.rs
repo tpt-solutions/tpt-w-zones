@@ -6,6 +6,7 @@
 
 #![doc(html_root_url = "https://docs.rs/zones-core/0.1.0")]
 
+pub mod actions;
 pub mod backend;
 pub mod config;
 pub mod engine;

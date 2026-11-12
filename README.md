@@ -55,7 +55,7 @@ schema_version = 1
 active_profile = "docked"
 
 [hotkeys]
-snap_left = "Ctrl+Alt+Left"
+"snap:halves:left" = "Ctrl+Alt+Left"
 
 [[layouts]]
 id = "halves"
@@ -70,7 +70,15 @@ name = "docked"
 monitors = { "DISPLAY1" = "halves" }
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) for the full schema.
+See [`docs/architecture.md`](docs/architecture.md) for the full schema, and [`docs/scripting.md`](docs/scripting.md) for rules, hotkey actions and the CLI.
+
+## Running (Windows)
+
+```powershell
+tpt-zones-cli validate                  # check your config
+tpt-zones-cli serve                     # run the service: hotkeys, rules, IPC
+tpt-zones-cli ctl windows               # talk to the running service
+```
 
 ## Building
 

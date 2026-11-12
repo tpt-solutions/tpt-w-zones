@@ -7,8 +7,9 @@ autostart = false
 log_level = "info"
 
 [hotkeys]
-snap_left = "Ctrl+Alt+Left"
-snap_right = "Ctrl+Alt+Right"
+"snap:halves:left" = "Ctrl+Alt+Left"
+"snap:halves:right" = "Ctrl+Alt+Right"
+apply_rules = "Ctrl+Alt+R"
 
 [[layouts]]
 id = "halves"

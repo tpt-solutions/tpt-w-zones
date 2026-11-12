@@ -9,7 +9,7 @@
 //! log_level = "info"
 //!
 //! [hotkeys]
-//! snap_left = "Ctrl+Alt+Left"
+//! "snap:halves:left" = "Ctrl+Alt+Left"
 //!
 //! [[layouts]]
 //! id = "halves"
@@ -29,6 +29,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::actions::Action;
 use crate::backend::WindowInfo;
 use crate::hotkey::Hotkey;
 use crate::model::{Layout, Profile};
@@ -50,7 +51,7 @@ pub struct Config {
     /// General preferences.
     #[serde(default)]
     pub general: General,
-    /// Action name → hotkey (e.g. `snap_left = "Ctrl+Alt+Left"`).
+    /// Action name → hotkey (e.g. `"snap:halves:left" = "Ctrl+Alt+Left"`, see `actions`).
     #[serde(default)]
     pub hotkeys: BTreeMap<String, Hotkey>,
     /// Available layouts.
@@ -168,6 +169,23 @@ impl Config {
             }
         }
 
+        for name in self.hotkeys.keys() {
+            let action: Action = name.parse()?;
+            if let Action::SnapFocused { layout, zone } = &action {
+                let layout_def = self.layout(layout).ok_or_else(|| {
+                    Error::Config(format!(
+                        "hotkey '{name}' references unknown layout '{layout}'"
+                    ))
+                })?;
+                if layout_def.zone(zone).is_none() {
+                    return Err(Error::Config(format!(
+                        "hotkey '{name}' references unknown zone '{}'",
+                        zone.0
+                    )));
+                }
+            }
+        }
+
         for (index, rule) in self.rules.iter().enumerate() {
             let label = rule
                 .name
@@ -265,7 +283,7 @@ autostart = true
 log_level = "debug"
 
 [hotkeys]
-snap_left = "Ctrl+Alt+Left"
+"snap:halves:left" = "Ctrl+Alt+Left"
 
 [[layouts]]
 id = "halves"
@@ -284,7 +302,7 @@ monitors = { "DISPLAY1" = "halves" }
     fn parses_sample() {
         let cfg = Config::from_toml(SAMPLE).unwrap();
         assert!(cfg.general.autostart);
-        assert_eq!(cfg.hotkeys["snap_left"].to_string(), "Ctrl+Alt+Left");
+        assert_eq!(cfg.hotkeys["snap:halves:left"].to_string(), "Ctrl+Alt+Left");
         assert_eq!(cfg.active().unwrap().layout_for("DISPLAY1"), Some("halves"));
     }
 

@@ -104,3 +104,49 @@ on usage errors.
 4. Run `tpt-zones-cli apply FILE` and check the output.
 
 The example file `docs/examples/config.toml` shows a complete config.
+
+## Hotkeys and the service
+
+`tpt-zones-cli serve [FILE]` runs the long-lived service. It:
+
+- registers every `[hotkeys]` entry,
+- applies placement rules at startup, whenever a window is created, and on `apply_rules`,
+- serves the named pipe `\.\pipe\tpt-zones` for `ctl` and other clients,
+- keeps the Run-at-logon entry in step with `general.autostart`.
+
+Each `[hotkeys]` key is an action name:
+
+| Action name        | Effect                                                  |
+| ------------------ | ------------------------------------------------------- |
+| `snap:LAYOUT:ZONE` | Move the focused window into `ZONE` of `LAYOUT`          |
+| `apply_rules`      | Apply every placement rule to the current windows        |
+| `reload`           | Re-read the config file; an invalid file keeps the old config |
+
+```toml
+[hotkeys]
+"snap:halves:left" = "Ctrl+Alt+Left"
+"snap:halves:right" = "Ctrl+Alt+Right"
+apply_rules = "Ctrl+Alt+R"
+```
+
+Config validation rejects unknown actions and `snap:` actions that name a missing layout or zone.
+
+### Talking to the service: `ctl`
+
+```text
+tpt-zones-cli ctl ping                          check that the service is running
+tpt-zones-cli ctl windows                       list windows, as the service sees them
+tpt-zones-cli ctl monitors                      list monitors
+tpt-zones-cli ctl snap WINDOW_ID LAYOUT ZONE    snap a window by id
+tpt-zones-cli ctl reload                        re-read config.toml
+tpt-zones-cli ctl watch                         print window events until interrupted
+```
+
+The pipe protocol is newline-delimited JSON (see `docs/architecture.md`, section 6). Any
+program can speak it: send `hello` first, then one request per line.
+
+### Limitations
+
+- New windows are checked for rules at 250 ms and 1 s after they appear. A window whose title
+  loads later than that may need `apply_rules` or its hotkey.
+- `serve` must be running for hotkeys, rules and `ctl` to work. There is no tray icon yet.

@@ -137,6 +137,17 @@ A complete example is in `README.md`.
 Exact-match negotiation is deliberately strict while the protocol is young. Relaxing it to
 "minimum supported version" is a later decision.
 
+## 6a. Service and IPC server (as built, Windows)
+
+- `tpt-zones-cli serve` runs one service process per user. All window and hotkey state is owned by
+  its main loop. Messages from the hotkey thread, the event-hook thread, and the pipe server arrive on one
+  channel, so no shared state is locked.
+- The pipe server (`zones-win::pipe`) runs an accept loop and one thread per client. Each client must
+  send `hello` first. Requests are forwarded to the main loop, which replies on a per-request channel.
+  A `subscribe` request turns the connection into a one-way event stream until the client disconnects.
+- Hotkey actions (`zones_core::actions`) are the bridge between config and behaviour:
+  `snap:LAYOUT:ZONE`, `apply_rules` and `reload`.
+
 ## 7. Logging
 
 - `zones_core::logging::init(default_level)` installs a `tracing` subscriber on stderr.
