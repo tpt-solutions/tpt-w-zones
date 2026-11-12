@@ -54,7 +54,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [x] Build zone layout canvas (draw/resize/delete zones)
 - [x] Build monitor-aware layout switching UI
 - [x] Build save/load layout profile UI
-- [ ] Build live preview (highlight zones on real monitors)
+- [x] Build live preview (highlight zones on real monitors)
 - [x] Wire up Tauri commands/IPC to `zones-core`
 - [x] Build settings screen (hotkeys, autostart, general preferences)
 - [x] Add light/dark theme support

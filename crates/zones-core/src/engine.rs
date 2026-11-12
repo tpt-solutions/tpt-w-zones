@@ -311,3 +311,137 @@ mod tests {
         ));
     }
 }
+
+/// One zone to draw in a preview, in screen pixels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreviewZone {
+    /// Zone name, shown as a label.
+    pub name: String,
+    /// Zone rectangle in screen pixels.
+    pub rect: Rect,
+}
+
+/// The zones that a profile would show on one monitor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreviewMonitor {
+    /// Stable monitor name, e.g. `DISPLAY1`.
+    pub monitor: String,
+    /// The monitor's work area in screen pixels.
+    pub work_area: Rect,
+    /// Zones to draw. Empty when the profile assigns no layout to this monitor.
+    pub zones: Vec<PreviewZone>,
+}
+
+/// Works out what a profile looks like on each monitor, without touching any window.
+///
+/// Monitors the profile does not mention are still listed, with no zones, so the preview
+/// shows the whole setup. An unknown profile name is treated as "no profile".
+#[must_use]
+pub fn preview_plan(
+    config: &Config,
+    monitors: &[Monitor],
+    profile: Option<&str>,
+) -> Vec<PreviewMonitor> {
+    let profile = profile.and_then(|name| config.profile(name));
+    monitors
+        .iter()
+        .map(|monitor| {
+            let zones = profile
+                .and_then(|p| p.layout_for(&monitor.name))
+                .and_then(|layout_id| config.layout(layout_id))
+                .map(|layout| {
+                    layout
+                        .zones
+                        .iter()
+                        .map(|zone| PreviewZone {
+                            name: zone.name.clone(),
+                            rect: zone.to_rect(monitor.work_area),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            PreviewMonitor {
+                monitor: monitor.name.clone(),
+                work_area: monitor.work_area,
+                zones,
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod preview_tests {
+    use super::*;
+    use crate::geometry::MonitorId;
+    use crate::model::{Layout, NormRect, Profile, Zone, ZoneId};
+
+    fn config_with_profile() -> Config {
+        let halves = Layout {
+            id: "halves".into(),
+            name: "Halves".into(),
+            zones: vec![
+                Zone {
+                    id: ZoneId("left".into()),
+                    name: "Left".into(),
+                    rect: NormRect {
+                        x: 0.0,
+                        y: 0.0,
+                        w: 0.5,
+                        h: 1.0,
+                    },
+                },
+                Zone {
+                    id: ZoneId("right".into()),
+                    name: "Right".into(),
+                    rect: NormRect {
+                        x: 0.5,
+                        y: 0.0,
+                        w: 0.5,
+                        h: 1.0,
+                    },
+                },
+            ],
+        };
+        let mut monitors = std::collections::BTreeMap::new();
+        monitors.insert("DISPLAY2".to_owned(), "halves".to_owned());
+        Config {
+            layouts: vec![halves],
+            profiles: vec![Profile {
+                name: "docked".into(),
+                monitors,
+            }],
+            ..Config::default()
+        }
+    }
+
+    fn monitor(id: u32, name: &str, x: i32) -> Monitor {
+        Monitor {
+            id: MonitorId(id),
+            name: name.into(),
+            bounds: Rect::new(x, 0, 1000, 800),
+            work_area: Rect::new(x, 0, 1000, 760),
+            scale_factor: 1.0,
+            primary: id == 0,
+        }
+    }
+
+    #[test]
+    fn zones_only_on_monitors_the_profile_maps() {
+        let cfg = config_with_profile();
+        let mons = [monitor(0, "DISPLAY1", 0), monitor(1, "DISPLAY2", 1000)];
+        let plan = preview_plan(&cfg, &mons, Some("docked"));
+        assert_eq!(plan.len(), 2);
+        assert!(plan[0].zones.is_empty());
+        assert_eq!(plan[1].zones.len(), 2);
+        assert_eq!(plan[1].zones[1].rect, Rect::new(1500, 0, 500, 760));
+    }
+
+    #[test]
+    fn unknown_profile_shows_monitors_without_zones() {
+        let cfg = config_with_profile();
+        let mons = [monitor(0, "DISPLAY2", 0)];
+        let plan = preview_plan(&cfg, &mons, Some("nope"));
+        assert_eq!(plan.len(), 1);
+        assert!(plan[0].zones.is_empty());
+    }
+}

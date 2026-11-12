@@ -23,6 +23,8 @@ pub mod events;
 #[cfg(windows)]
 pub mod hotkey;
 #[cfg(windows)]
+pub mod overlay;
+#[cfg(windows)]
 pub mod pipe;
 #[cfg(windows)]
 pub mod tray;

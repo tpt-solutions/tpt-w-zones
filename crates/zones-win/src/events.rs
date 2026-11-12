@@ -10,13 +10,17 @@
 use std::sync::mpsc;
 use std::sync::Mutex;
 
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
+use windows::core::w;
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
 use windows::Win32::UI::WindowsAndMessaging::{
-    DispatchMessageW, GetAncestor, GetMessageW, PostThreadMessageW, TranslateMessage,
-    EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, EVENT_OBJECT_LOCATIONCHANGE,
-    EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND, EVENT_SYSTEM_MINIMIZESTART, GA_ROOT, MSG,
-    OBJID_WINDOW, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_QUIT,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetAncestor, GetMessageW,
+    PostThreadMessageW, RegisterClassW, TranslateMessage, EVENT_OBJECT_CREATE,
+    EVENT_OBJECT_DESTROY, EVENT_OBJECT_LOCATIONCHANGE, EVENT_SYSTEM_FOREGROUND,
+    EVENT_SYSTEM_MINIMIZEEND, EVENT_SYSTEM_MINIMIZESTART, GA_ROOT, MSG, OBJID_WINDOW,
+    WINDOW_EX_STYLE, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_QUIT,
+    WNDCLASSW, WS_POPUP,
 };
 use zones_core::backend::{Subscription, WindowEvent, WindowEventSink};
 use zones_core::{Error, Result};
@@ -108,6 +112,12 @@ fn event_thread(ready: &mpsc::Sender<Result<u32>>) {
     let thread_id = unsafe { windows::Win32::System::Threading::GetCurrentThreadId() };
     let _ = ready.send(Ok(thread_id));
 
+    // A hidden top-level window receives broadcast display messages; message-only windows do not.
+    let display = create_display_window();
+    if display.is_none() {
+        tracing::warn!("display watcher unavailable; MonitorsChanged will not be reported");
+    }
+
     let mut msg = MSG::default();
     // SAFETY: standard message pump on the thread that owns the hooks.
     // GetMessageW returns 0 on WM_QUIT and -1 on error; both end the loop.
@@ -117,7 +127,60 @@ fn event_thread(ready: &mpsc::Sender<Result<u32>>) {
             DispatchMessageW(&msg);
         }
     }
+    if let Some(hwnd) = display {
+        // SAFETY: the window was created on this thread and is destroyed exactly once.
+        let _ = unsafe { DestroyWindow(hwnd) };
+    }
     unhook_all(&hooks);
+}
+
+fn create_display_window() -> Option<HWND> {
+    // SAFETY: GetModuleHandleW(None) returns the running executable.
+    let instance = unsafe { GetModuleHandleW(None) }.ok()?;
+    let class = WNDCLASSW {
+        lpfnWndProc: Some(display_proc),
+        hInstance: instance.into(),
+        lpszClassName: w!("TptZonesDisplay"),
+        ..Default::default()
+    };
+    // SAFETY: the class is fully initialised with static strings; a duplicate registration returns 0 and is harmless.
+    unsafe { RegisterClassW(&class) };
+    // SAFETY: all pointer arguments are static or null. The window is never shown.
+    unsafe {
+        CreateWindowExW(
+            WINDOW_EX_STYLE(0),
+            w!("TptZonesDisplay"),
+            w!("tpt-zones display"),
+            WS_POPUP,
+            0,
+            0,
+            0,
+            0,
+            None,
+            None,
+            Some(instance.into()),
+            None,
+        )
+    }
+    .ok()
+}
+
+unsafe extern "system" fn display_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    if msg == WM_DISPLAYCHANGE {
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if let Some(sink) = lock_sink().as_ref() {
+                sink(WindowEvent::MonitorsChanged);
+            }
+        }));
+        return LRESULT(0);
+    }
+    // SAFETY: unhandled messages go to the default procedure with the same arguments.
+    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
 fn unhook_all(hooks: &[HWINEVENTHOOK]) {
@@ -200,6 +263,41 @@ mod tests {
         drop(first);
         let again = super::subscribe(Box::new(|_| {})).expect("resubscribe after drop");
         drop(again);
+    }
+
+    /// Sends the display watcher the same broadcast Windows sends on a display change, and
+    /// checks that `MonitorsChanged` is reported. Does not change the real display settings.
+    #[test]
+    #[ignore = "needs an interactive desktop session"]
+    fn reports_display_change_messages() {
+        use windows::core::w;
+        use windows::Win32::Foundation::{LPARAM, WPARAM};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            FindWindowW, SendMessageW, WM_DISPLAYCHANGE,
+        };
+
+        let _guard = LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let (tx, rx) = mpsc::channel::<WindowEvent>();
+        let sub = super::subscribe(Box::new(move |ev| {
+            let _ = tx.send(ev);
+        }))
+        .expect("subscribe");
+
+        // SAFETY: the class name is a static string; the handle is only used for SendMessageW
+        // while the subscription (and therefore the watcher window) is alive.
+        let found = (0..50).find_map(|_| {
+            std::thread::sleep(Duration::from_millis(50));
+            let hwnd = unsafe { FindWindowW(w!("TptZonesDisplay"), None) }.ok()?;
+            (!hwnd.0.is_null()).then_some(hwnd)
+        });
+        let hwnd = found.expect("display watcher window exists");
+        unsafe { SendMessageW(hwnd, WM_DISPLAYCHANGE, Some(WPARAM(0)), Some(LPARAM(0))) };
+
+        let got = rx.recv_timeout(Duration::from_secs(2)).ok();
+        sub.cancel();
+        assert_eq!(got, Some(WindowEvent::MonitorsChanged));
     }
 
     /// Launches Notepad, moves it, and checks that a `Moved` event arrives for it.

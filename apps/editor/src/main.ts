@@ -594,6 +594,16 @@ function renderProfiles(): void {
           },
         }),
         h("h3", { text: "Preview" }),
+        h("p", {
+          className: "muted",
+          text: "Show this profile's zones on the real monitors for a few seconds. Unsaved edits are included.",
+        }),
+        h("button", {
+          text: "Show on monitors (5 s)",
+          onclick: () => {
+            showOnMonitors();
+          },
+        }),
         h("div", { id: "preview", className: "preview" }),
       )
     : h(
@@ -620,6 +630,17 @@ function renderProfiles(): void {
     h("div", { className: "split" }, sidebar, mapping),
   );
   renderPreviewOnly();
+}
+
+function showOnMonitors(): void {
+  call<null>("show_preview", {
+    config: state.config,
+    profile: state.profileName,
+    seconds: 5,
+  }).catch((err: unknown) => {
+    state.status = `Preview failed: ${errorText(err)}`;
+    renderStatus();
+  });
 }
 
 function renderPreviewOnly(): void {

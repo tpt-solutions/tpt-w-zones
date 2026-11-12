@@ -143,7 +143,12 @@ impl Service {
     fn on_event(&mut self, event: WindowEvent) {
         self.subscribers
             .retain(|sink| sink.send(event.clone()).is_ok());
-        if let WindowEvent::Created(_) = event {
+        // New windows and display changes both need the rules re-checked. Displays
+        // settle after a change, so the same delayed retries are used.
+        if matches!(
+            event,
+            WindowEvent::Created(_) | WindowEvent::MonitorsChanged
+        ) {
             self.schedule_rule_retries();
         }
     }

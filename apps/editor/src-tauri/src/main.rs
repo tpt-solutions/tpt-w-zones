@@ -72,6 +72,25 @@ fn list_monitors() -> Result<Vec<Monitor>, String> {
     zones_win::display::enumerate().map_err(|e| e.to_string())
 }
 
+/// Draws the zones of `profile` (or the active profile) on every monitor for `seconds`.
+/// Uses the configuration passed in, so unsaved edits can be previewed.
+#[cfg(windows)]
+#[tauri::command]
+fn show_preview(config: Config, profile: Option<String>, seconds: u32) -> Result<(), String> {
+    let monitors = zones_win::display::enumerate().map_err(|e| e.to_string())?;
+    let name = profile.as_deref().or(config.active_profile.as_deref());
+    let plan = zones_core::engine::preview_plan(&config, &monitors, name);
+    let duration = std::time::Duration::from_secs(u64::from(seconds.clamp(1, 30)));
+    zones_win::overlay::show(plan, duration).map_err(|e| e.to_string())
+}
+
+/// Preview overlays are only implemented on Windows for now.
+#[cfg(not(windows))]
+#[tauri::command]
+fn show_preview(_config: Config, _profile: Option<String>, _seconds: u32) -> Result<(), String> {
+    Err("previews are not available on this platform yet".into())
+}
+
 /// Monitor enumeration is only implemented on Windows for now.
 #[cfg(not(windows))]
 #[tauri::command]
@@ -92,7 +111,8 @@ fn main() {
             load_config,
             save_config,
             validate_config,
-            list_monitors
+            list_monitors,
+            show_preview
         ])
         .run(tauri::generate_context!())
         .expect("error while running tpt-zones editor");
