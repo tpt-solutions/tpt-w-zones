@@ -34,7 +34,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [x] Implement global hotkey registration
 - [x] Implement multi-monitor + DPI-aware geometry detection
 - [x] Implement zone snapping/tiling logic (move/resize windows into zones)
-- [ ] Implement system tray icon + menu
+- [x] Implement system tray icon + menu
 - [x] Implement autostart (registry/startup entry)
 - [x] Write integration tests / manual test checklist for Windows backend
 

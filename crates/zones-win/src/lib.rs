@@ -25,6 +25,8 @@ pub mod hotkey;
 #[cfg(windows)]
 pub mod pipe;
 #[cfg(windows)]
+pub mod tray;
+#[cfg(windows)]
 pub mod window;
 
 #[cfg(windows)]

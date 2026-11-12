@@ -18,6 +18,7 @@ use zones_core::config::Config;
 use zones_core::ipc::{Request, Response, PROTOCOL_VERSION};
 use zones_core::{engine, Error, Result};
 use zones_win::pipe::{self, ClientMsg};
+use zones_win::tray::{self, TrayCommand};
 use zones_win::{autostart, window, WinBackend};
 
 /// Delays after a new window appears before rules are re-applied. A new window often has
@@ -29,6 +30,7 @@ enum Msg {
     Hotkey(Action),
     Event(WindowEvent),
     Client(ClientMsg),
+    Tray(TrayCommand),
 }
 
 struct Service {
@@ -58,6 +60,27 @@ pub fn run(config_path: PathBuf) -> Result<()> {
     let (client_tx, client_rx) = mpsc::channel::<ClientMsg>();
     let _pipe = pipe::serve(client_tx)?;
     spawn_forwarder(client_rx, tx.clone());
+
+    // The tray is a convenience: if it cannot start, the service still runs.
+    let (tray_tx, tray_rx) = mpsc::channel::<TrayCommand>();
+    let _tray = match tray::start(tray_tx) {
+        Ok(tray) => {
+            tracing::info!("tray icon ready");
+            let to_service = tx.clone();
+            std::thread::spawn(move || {
+                for cmd in tray_rx {
+                    if to_service.send(Msg::Tray(cmd)).is_err() {
+                        break;
+                    }
+                }
+            });
+            Some(tray)
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "tray icon unavailable");
+            None
+        }
+    };
 
     let mut service = Service {
         backend,
@@ -106,6 +129,12 @@ impl Service {
                 Msg::Client(ClientMsg::Request(request, reply)) => {
                     let response = self.handle_request(request);
                     let _ = reply.send(response);
+                }
+                Msg::Tray(TrayCommand::Reload) => self.run_action(&Action::Reload),
+                Msg::Tray(TrayCommand::ApplyRules) => self.run_action(&Action::ApplyRules),
+                Msg::Tray(TrayCommand::Quit) => {
+                    tracing::info!("quit requested from the tray");
+                    break;
                 }
             }
         }

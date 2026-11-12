@@ -87,3 +87,12 @@ at startup and moves matching windows.
 - [ ] `tpt-zones-cli ctl watch` prints created, moved and focused events as they happen.
 - [ ] Each configured hotkey runs its action from any application, and a combination owned by another app is logged as not registered.
 - [ ] A client that sends a bad handshake gets an error response, and the service keeps serving other clients.
+
+### Tray icon
+
+- [ ] The tpt-zones icon appears in the notification area when `serve` starts, and logs `tray icon ready`.
+- [ ] Right-clicking the icon shows *Reload config*, *Apply rules now* and *Quit tpt-zones*.
+- [ ] *Reload config* re-reads the file and logs `configuration reloaded`. A broken file logs a warning and keeps the old config.
+- [ ] *Apply rules now* re-places windows that are out of their zones.
+- [ ] *Quit tpt-zones* ends the process, removes the icon, and releases every hotkey.
+- [ ] After a forced kill (Task Manager), the icon may linger until hovered. This is a known shell behaviour.
