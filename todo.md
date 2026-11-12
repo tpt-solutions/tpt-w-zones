@@ -6,27 +6,27 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 0 — Project & OSS Setup
 
-- [ ] Initialize git repo, `.gitignore` (Rust + Node/Tauri)
-- [ ] Set up Cargo workspace (`zones-core`, `zones-win`, `zones-linux`, `zones-archon-bridge`)
-- [ ] Scaffold `apps/editor` (Tauri + TypeScript)
-- [ ] Add `LICENSE-MIT` and `LICENSE-APACHE`, dual-license notice in README
-- [ ] Write `README.md` (concept, features, build instructions, TPT Solutions attribution)
-- [ ] Write `CONTRIBUTING.md`
-- [ ] Set up GitHub issue templates and PR template
-- [ ] Set up CI (GitHub Actions): build/lint/test on Windows + Linux
-- [ ] Add code formatting/linting config (`rustfmt`, `clippy`, ESLint/Prettier)
+- [x] Initialize git repo, `.gitignore` (Rust + Node/Tauri)
+- [x] Set up Cargo workspace (`zones-core`, `zones-win`, `zones-linux`, `zones-archon-bridge`)
+- [x] Scaffold `apps/editor` (Tauri + TypeScript)
+- [x] Add `LICENSE-MIT` and `LICENSE-APACHE`, dual-license notice in README
+- [x] Write `README.md` (concept, features, build instructions, TPT Solutions attribution)
+- [x] Write `CONTRIBUTING.md`
+- [x] Set up GitHub issue templates and PR template
+- [x] Set up CI (GitHub Actions): build/lint/test on Windows + Linux
+- [x] Add code formatting/linting config (`rustfmt`, `clippy`, ESLint/Prettier)
 - [ ] Register repo under TPT Solutions org, add branding/README badges
 
 ## Phase 1 — Core Architecture & Platform Abstraction
 
-- [ ] Design cross-platform trait boundary (window enumeration, move/resize, monitor info)
-- [ ] Design hotkey registration abstraction
-- [ ] Design core event loop / window event subscription model
-- [ ] Design workspace & zone data model (layouts, profiles, monitors)
-- [ ] Design config file format (e.g. TOML/JSON schema)
-- [ ] Design IPC protocol (core <-> editor, and future core <-> Archon bridge)
-- [ ] Set up `zones-core` crate with shared types and traits
-- [ ] Set up basic logging/tracing infrastructure
+- [x] Design cross-platform trait boundary (window enumeration, move/resize, monitor info)
+- [x] Design hotkey registration abstraction
+- [x] Design core event loop / window event subscription model
+- [x] Design workspace & zone data model (layouts, profiles, monitors)
+- [x] Design config file format (e.g. TOML/JSON schema)
+- [x] Design IPC protocol (core <-> editor, and future core <-> Archon bridge)
+- [x] Set up `zones-core` crate with shared types and traits
+- [x] Set up basic logging/tracing infrastructure
 
 ## Phase 2 — Windows Backend (`zones-win`)
 

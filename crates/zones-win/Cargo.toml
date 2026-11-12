@@ -1,0 +1,15 @@
+[package]
+name = "zones-win"
+description = "Windows backend for tpt-zones (Win32 window/monitor/hotkey implementation)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+zones-core = { path = "../zones-core" }
+
+[lints]
+workspace = true

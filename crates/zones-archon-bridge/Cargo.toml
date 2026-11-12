@@ -1,0 +1,15 @@
+[package]
+name = "zones-archon-bridge"
+description = "Archon user-space service adapter for tpt-zones (speaks tpt-zones IPC over Archon IPC)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+zones-core = { path = "../zones-core" }
+
+[lints]
+workspace = true
