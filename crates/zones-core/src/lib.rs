@@ -8,11 +8,13 @@
 
 pub mod backend;
 pub mod config;
+pub mod engine;
 pub mod geometry;
 pub mod hotkey;
 pub mod ipc;
 pub mod logging;
 pub mod model;
+pub mod rules;
 
 pub use backend::{
     HotkeyBackend, HotkeyHandler, Subscription, WindowBackend, WindowEvent, WindowEventSink,

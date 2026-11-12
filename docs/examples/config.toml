@@ -1,0 +1,44 @@
+# Example tpt-zones configuration. Validate with: tpt-zones-cli validate docs/examples/config.toml
+schema_version = 1
+active_profile = "docked"
+
+[general]
+autostart = false
+log_level = "info"
+
+[hotkeys]
+snap_left = "Ctrl+Alt+Left"
+snap_right = "Ctrl+Alt+Right"
+
+[[layouts]]
+id = "halves"
+name = "Halves"
+zones = [
+  { id = "left",  name = "Left",  rect = { x = 0.0, y = 0.0, w = 0.5, h = 1.0 } },
+  { id = "right", name = "Right", rect = { x = 0.5, y = 0.0, w = 0.5, h = 1.0 } },
+]
+
+[[layouts]]
+id = "thirds"
+name = "Thirds with sidebar"
+zones = [
+  { id = "main",    name = "Main",    rect = { x = 0.0,   y = 0.0, w = 0.667, h = 1.0 } },
+  { id = "sidebar", name = "Sidebar", rect = { x = 0.667, y = 0.0, w = 0.333, h = 1.0 } },
+]
+
+[[profiles]]
+name = "docked"
+monitors = { "DISPLAY1" = "thirds", "DISPLAY2" = "halves" }
+
+[[rules]]
+name = "editor on main"
+process = "code.exe"
+profile = "docked"
+layout = "thirds"
+zone = "main"
+
+[[rules]]
+name = "chat on sidebar"
+process = "slack*"
+layout = "thirds"
+zone = "sidebar"

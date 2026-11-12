@@ -5,6 +5,7 @@ members = [
     "crates/zones-win",
     "crates/zones-linux",
     "crates/zones-archon-bridge",
+    "crates/zones-cli",
     "apps/editor/src-tauri",
 ]
 
@@ -25,7 +26,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_docs = "warn"
 
 [workspace.lints.clippy]

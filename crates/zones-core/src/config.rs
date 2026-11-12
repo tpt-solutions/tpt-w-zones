@@ -25,11 +25,14 @@
 //! ```
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::backend::WindowInfo;
 use crate::hotkey::Hotkey;
 use crate::model::{Layout, Profile};
+use crate::rules::{first_match, Context, Rule};
 use crate::{Error, Result};
 
 /// The config schema version this build reads and writes.
@@ -56,6 +59,9 @@ pub struct Config {
     /// Available profiles.
     #[serde(default, rename = "profiles")]
     pub profiles: Vec<Profile>,
+    /// Placement rules, evaluated in order; the first match wins.
+    #[serde(default, rename = "rules")]
+    pub rules: Vec<Rule>,
 }
 
 /// General preferences.
@@ -86,6 +92,7 @@ impl Default for Config {
             hotkeys: BTreeMap::new(),
             layouts: Vec::new(),
             profiles: Vec::new(),
+            rules: Vec::new(),
         }
     }
 }
@@ -160,7 +167,70 @@ impl Config {
                 )));
             }
         }
+
+        for (index, rule) in self.rules.iter().enumerate() {
+            let label = rule
+                .name
+                .clone()
+                .unwrap_or_else(|| format!("#{}", index + 1));
+            if !rule.has_window_condition() {
+                return Err(Error::Config(format!(
+                    "rule {label} must set process, class or title_contains"
+                )));
+            }
+            let layout = self.layout(&rule.layout).ok_or_else(|| {
+                Error::Config(format!(
+                    "rule {label} references unknown layout '{}'",
+                    rule.layout
+                ))
+            })?;
+            if layout.zone(&rule.zone).is_none() {
+                return Err(Error::Config(format!(
+                    "rule {label} references unknown zone '{}' in layout '{}'",
+                    rule.zone.0, rule.layout
+                )));
+            }
+            if let Some(profile) = &rule.profile {
+                if !profile_names.contains(profile.as_str()) {
+                    return Err(Error::Config(format!(
+                        "rule {label} references unknown profile '{profile}'"
+                    )));
+                }
+            }
+        }
         Ok(())
+    }
+
+    /// Reads, parses and validates a configuration file.
+    ///
+    /// # Errors
+    /// Returns [`Error::Config`] if the file cannot be read or is invalid.
+    pub fn load(path: &Path) -> Result<Self> {
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| Error::Config(format!("reading {}: {e}", path.display())))?;
+        Self::from_toml(&text)
+    }
+
+    /// Validates and writes the configuration to `path` atomically: the data goes to a
+    /// temporary sibling file that is then renamed over the target, so a crash cannot
+    /// leave a half-written config behind.
+    ///
+    /// # Errors
+    /// Returns [`Error::Config`] if validation or any file operation fails.
+    pub fn save(&self, path: &Path) -> Result<()> {
+        self.validate()?;
+        let text = self.to_toml()?;
+        let tmp = path.with_extension("toml.tmp");
+        std::fs::write(&tmp, text)
+            .map_err(|e| Error::Config(format!("writing {}: {e}", tmp.display())))?;
+        std::fs::rename(&tmp, path)
+            .map_err(|e| Error::Config(format!("replacing {}: {e}", path.display())))
+    }
+
+    /// Evaluates the rules for `window` and returns the first matching rule, if any.
+    #[must_use]
+    pub fn placement_for<'a>(&'a self, window: &WindowInfo, ctx: Context<'_>) -> Option<&'a Rule> {
+        first_match(&self.rules, window, ctx)
     }
 
     /// Finds a layout by id.
@@ -235,6 +305,34 @@ monitors = { "DISPLAY1" = "halves" }
     fn rejects_unknown_top_level_key() {
         let bad = SAMPLE.replace("schema_version = 1", "schema_version = 1\nmystery = 1");
         assert!(Config::from_toml(&bad).is_err());
+    }
+
+    #[test]
+    fn rules_reference_known_layouts_zones_and_profiles() {
+        let base = format!(
+            "{SAMPLE}\n[[rules]]\nprocess = \"code.exe\"\nlayout = \"halves\"\nzone = \"left\"\n"
+        );
+        assert!(Config::from_toml(&base).is_ok());
+
+        let bad_zone = base.replace("zone = \"left\"", "zone = \"nope\"");
+        assert!(Config::from_toml(&bad_zone).is_err());
+
+        let bad_layout = base.replace("layout = \"halves\"\nzone", "layout = \"ghost\"\nzone");
+        assert!(Config::from_toml(&bad_layout).is_err());
+
+        let no_condition = format!("{SAMPLE}\n[[rules]]\nlayout = \"halves\"\nzone = \"left\"\n");
+        assert!(Config::from_toml(&no_condition).is_err());
+    }
+
+    #[test]
+    fn save_then_load_round_trips() {
+        let cfg = Config::from_toml(SAMPLE).unwrap();
+        let dir = std::env::temp_dir().join(format!("tpt-zones-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("config.toml");
+        cfg.save(&path).unwrap();
+        assert_eq!(Config::load(&path).unwrap(), cfg);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

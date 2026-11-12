@@ -157,7 +157,21 @@ Exact-match negotiation is deliberately strict while the protocol is young. Rela
 
 - Whether `Layout` should allow nested splits, or stay a flat list of rectangles
   (affects the Phase 4 editor and the zone-to-rect math).
-- Whether rules (Phase 5) live in `config.toml` or in separate script files.
+- Rules currently live in `config.toml` as `[[rules]]` (see `docs/scripting.md`). Whether
+  richer logic (scripts, computed conditions) is needed beyond this declarative form is open.
 - Whether the core service runs as one process per user or one per session.
 - Whether Wayland global hotkeys are possible on GNOME without an extension (Phase 3
   research item).
+
+## 10. Placement pipeline (as built)
+
+1. `WindowBackend::monitors()` and `windows()` snapshot the desktop.
+2. `zones_core::engine::plan` evaluates `[[rules]]` in order against each window and
+   its context (monitor name, active profile), and computes the target rectangle from the
+   zone's work-area fraction. Windows already in place are skipped.
+3. `zones_core::engine::apply` executes the plan through `WindowBackend::place`. A failure on
+   one window is logged and does not stop the others.
+
+Planning is pure and unit-tested with an in-memory backend. The Windows backend
+(`zones-win`) supplies the OS side. Its placement compensates for DWM invisible borders, so
+zones line up with the visible frame.

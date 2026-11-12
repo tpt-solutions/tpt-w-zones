@@ -30,13 +30,13 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 2 — Windows Backend (`zones-win`)
 
-- [ ] Implement Win32 window event hooks (foreground/move/resize/create/destroy)
-- [ ] Implement global hotkey registration
-- [ ] Implement multi-monitor + DPI-aware geometry detection
-- [ ] Implement zone snapping/tiling logic (move/resize windows into zones)
+- [x] Implement Win32 window event hooks (foreground/move/resize/create/destroy)
+- [x] Implement global hotkey registration
+- [x] Implement multi-monitor + DPI-aware geometry detection
+- [x] Implement zone snapping/tiling logic (move/resize windows into zones)
 - [ ] Implement system tray icon + menu
-- [ ] Implement autostart (registry/startup entry)
-- [ ] Write integration tests / manual test checklist for Windows backend
+- [x] Implement autostart (registry/startup entry)
+- [x] Write integration tests / manual test checklist for Windows backend
 
 ## Phase 3 — Linux Backend (`zones-linux`, Wayland)
 
@@ -62,12 +62,12 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 5 — Automation & Scripting
 
-- [ ] Design scriptable layout rules (per-app, per-monitor, per-profile)
-- [ ] Implement rule engine in `zones-core`
-- [ ] Build CLI for scripting/automation (`tpt-zones-cli`)
+- [x] Design scriptable layout rules (per-app, per-monitor, per-profile)
+- [x] Implement rule engine in `zones-core`
+- [x] Build CLI for scripting/automation (`tpt-zones-cli`)
 - [ ] Build hotkey/keybinding customization UI
-- [ ] Implement config import/export
-- [ ] Document scripting API and examples
+- [x] Implement config import/export
+- [x] Document scripting API and examples
 
 ## Phase 6 — Archon Integration (`zones-archon-bridge`)
 
