@@ -38,6 +38,7 @@ export interface Rule {
 export interface General {
   autostart: boolean;
   log_level: string;
+  crash_reports: boolean;
 }
 
 export interface Config {

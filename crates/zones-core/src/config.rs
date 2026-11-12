@@ -73,6 +73,8 @@ pub struct General {
     pub autostart: bool,
     /// Log filter, e.g. `"info"` or `"zones_core=debug"`.
     pub log_level: String,
+    /// Write local crash reports when the program panics. Nothing is sent over the network.
+    pub crash_reports: bool,
 }
 
 impl Default for General {
@@ -80,6 +82,7 @@ impl Default for General {
         Self {
             autostart: false,
             log_level: "info".into(),
+            crash_reports: true,
         }
     }
 }

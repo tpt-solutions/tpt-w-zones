@@ -10,6 +10,7 @@ pub mod access;
 pub mod actions;
 pub mod backend;
 pub mod config;
+pub mod crash;
 pub mod engine;
 pub mod geometry;
 pub mod hotkey;

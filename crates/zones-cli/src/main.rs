@@ -35,6 +35,12 @@ usage:
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let component = if args.first().map(String::as_str) == Some("serve") {
+        "service"
+    } else {
+        "cli"
+    };
+    zones_core::crash::install(component);
     // The service logs its actions at info; one-shot commands stay quiet unless asked.
     let default_level = if args.first().map(String::as_str) == Some("serve") {
         "info"

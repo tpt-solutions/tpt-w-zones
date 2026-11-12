@@ -93,5 +93,5 @@ They take the configuration from the webview, so the webview is trusted code. Th
 
 - Run the second-user test for finding 1 on a Windows machine with two accounts.
 - Review the Linux backend when it exists: D-Bus and compositor access will be new surfaces.
-- Telemetry and crash reporting are not implemented. If added, they must be opt-in and
-  must not send window titles or process names.
+- Local crash reports are written (see docs/crash-reports.md) and never leave the machine.
+  Sending them anywhere would need opt-in, a default of off, and no window titles or process names.

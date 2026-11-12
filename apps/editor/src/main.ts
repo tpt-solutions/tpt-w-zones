@@ -24,7 +24,7 @@ interface State {
 const LOG_LEVELS = ["error", "warn", "info", "debug", "trace"];
 const EMPTY_CONFIG: Config = {
   schema_version: 1,
-  general: { autostart: false, log_level: "info" },
+  general: { autostart: false, log_level: "info", crash_reports: true },
   hotkeys: {},
   layouts: [],
   profiles: [],
@@ -57,6 +57,9 @@ let validateTimer: number | undefined;
 
 /// The hotkey action waiting for a key combination, if any.
 let recording: string | null = null;
+
+/// Folder where local crash reports are written, loaded once at startup.
+let crashDir: string | null = null;
 
 /// Maps KeyboardEvent.code values to the key names zones-core accepts.
 const CODE_NAMES: Record<string, string> = {
@@ -873,6 +876,25 @@ function renderSettings(): void {
       ),
       h(
         "label",
+        { className: "field inline" },
+        h("input", {
+          type: "checkbox",
+          checked: state.config.general.crash_reports,
+          onchange: (e: Event) => {
+            state.config.general.crash_reports = (e.target as HTMLInputElement).checked;
+            changed();
+          },
+        }),
+        "Write local crash reports when something goes wrong (never sent anywhere)",
+      ),
+      h(
+        "p",
+        { className: "muted small" },
+        "Crash reports folder: ",
+        h("code", { text: crashDir ?? "unknown" }),
+      ),
+      h(
+        "label",
         { className: "field" },
         "Log level",
         h(
@@ -1026,6 +1048,13 @@ async function init(): Promise<void> {
       void save();
     }
   });
+
+  try {
+    crashDir = await call<string | null>("crash_report_dir");
+    render();
+  } catch {
+    crashDir = null;
+  }
 
   try {
     const info = await call<AppInfo>("app_info");

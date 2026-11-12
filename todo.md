@@ -82,7 +82,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [ ] Build Windows installer (MSI) + winget manifest
 - [ ] Build Linux packages (AppImage/Flatpak, or distro-specific packages)
 - [ ] Implement auto-update mechanism
-- [ ] Implement opt-in crash reporting/telemetry
+- [ ] Implement opt-in crash reporting/telemetry (local reports done: docs/crash-reports.md; sending pending)
 - [ ] Build documentation site (usage, config reference, FAQ)
 - [ ] Benchmark latency/performance vs. FancyZones and komorebi
 - [x] Accessibility pass on editor UI (keyboard zone list, tab ARIA links, focus rings, WCAG AA contrast checked; screen-reader testing not done)

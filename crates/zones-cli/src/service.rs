@@ -50,6 +50,7 @@ struct Service {
 /// Returns an error if the config is invalid, or the event hooks or the pipe cannot start.
 pub fn run(config_path: PathBuf) -> Result<()> {
     let config = load_or_default(&config_path)?;
+    zones_core::crash::set_enabled(config.general.crash_reports);
     let (tx, rx) = mpsc::channel::<Msg>();
 
     let backend = WinBackend::new();
@@ -234,6 +235,7 @@ impl Service {
     /// the running configuration untouched.
     fn reload(&mut self) -> Result<()> {
         let config = Config::load(&self.config_path)?;
+        zones_core::crash::set_enabled(config.general.crash_reports);
         self.config = config;
         self.sync_autostart();
         self.register_hotkeys();

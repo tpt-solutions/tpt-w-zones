@@ -46,7 +46,9 @@ fn load_config() -> Result<Config, String> {
     if !path.exists() {
         return Ok(Config::default());
     }
-    Config::load(&path).map_err(|e| e.to_string())
+    let config = Config::load(&path).map_err(|e| e.to_string())?;
+    zones_core::crash::set_enabled(config.general.crash_reports);
+    Ok(config)
 }
 
 /// Validates and saves the configuration atomically to the user's config file.
@@ -56,13 +58,21 @@ fn save_config(config: Config) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    config.save(&path).map_err(|e| e.to_string())
+    config.save(&path).map_err(|e| e.to_string())?;
+    zones_core::crash::set_enabled(config.general.crash_reports);
+    Ok(())
 }
 
 /// Validates a configuration without saving it, so the editor can show problems live.
 #[tauri::command]
 fn validate_config(config: Config) -> Result<(), String> {
     config.validate().map_err(|e| e.to_string())
+}
+
+/// Where local crash reports are written, shown in Settings so they can be found and attached.
+#[tauri::command]
+fn crash_report_dir() -> Option<String> {
+    zones_core::crash::crash_dir().map(|p| p.display().to_string())
 }
 
 /// Lists monitors for the live preview.
@@ -104,6 +114,7 @@ fn user_path() -> Result<PathBuf, String> {
 
 fn main() {
     zones_core::logging::init("info");
+    zones_core::crash::install("editor");
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -112,7 +123,8 @@ fn main() {
             save_config,
             validate_config,
             list_monitors,
-            show_preview
+            show_preview,
+            crash_report_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tpt-zones editor");
