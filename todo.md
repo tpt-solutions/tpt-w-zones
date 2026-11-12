@@ -65,7 +65,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [x] Design scriptable layout rules (per-app, per-monitor, per-profile)
 - [x] Implement rule engine in `zones-core`
 - [x] Build CLI for scripting/automation (`tpt-zones-cli`)
-- [x] Build hotkey/keybinding customization UI (text entry in the editor Settings tab; key capture not yet)
+- [x] Build hotkey/keybinding customization UI (editor Settings: Record captures a key combination; text entry also works)
 - [x] Implement config import/export
 - [x] Document scripting API and examples
 

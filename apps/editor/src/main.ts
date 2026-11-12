@@ -55,6 +55,68 @@ const canvas = new LayoutCanvas({
 
 let validateTimer: number | undefined;
 
+/// The hotkey action waiting for a key combination, if any.
+let recording: string | null = null;
+
+/// Maps KeyboardEvent.code values to the key names zones-core accepts.
+const CODE_NAMES: Record<string, string> = {
+  Space: "Space",
+  Enter: "Enter",
+  Tab: "Tab",
+  Escape: "Escape",
+  Backspace: "Backspace",
+  Delete: "Delete",
+  Insert: "Insert",
+  Home: "Home",
+  End: "End",
+  PageUp: "PageUp",
+  PageDown: "PageDown",
+  ArrowLeft: "Left",
+  ArrowRight: "Right",
+  ArrowUp: "Up",
+  ArrowDown: "Down",
+};
+
+/** Key name for a physical key code, or null for keys we cannot bind. */
+function keyName(code: string): string | null {
+  const named = CODE_NAMES[code] as string | undefined;
+  if (named !== undefined) {
+    return named;
+  }
+  if (/^Key[A-Z]$/.test(code)) {
+    return code.slice(3);
+  }
+  if (/^Digit[0-9]$/.test(code)) {
+    return code.slice(5);
+  }
+  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) {
+    return code;
+  }
+  return null;
+}
+
+/** Builds a hotkey string such as "Ctrl+Alt+Left", or null for modifier-only presses. */
+function comboFrom(e: KeyboardEvent): string | null {
+  const key = keyName(e.code);
+  if (key === null) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (e.metaKey) {
+    parts.push("Win");
+  }
+  if (e.ctrlKey) {
+    parts.push("Ctrl");
+  }
+  if (e.altKey) {
+    parts.push("Alt");
+  }
+  if (e.shiftKey) {
+    parts.push("Shift");
+  }
+  return [...parts, key].join("+");
+}
+
 // ---------- commands ----------
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -759,9 +821,19 @@ function renderSettings(): void {
           type: "text",
           value: hotkey,
           placeholder: "Ctrl+Alt+Left",
+          "aria-label": `Hotkey for `,
           oninput: (e: Event) => {
             state.config.hotkeys[action] = (e.target as HTMLInputElement).value.trim();
             changed();
+          },
+        }),
+        h("button", {
+          text: recording === action ? "Press keys… (Esc cancels)" : "Record",
+          "aria-label": `Record hotkey for `,
+          "aria-pressed": String(recording === action),
+          onclick: () => {
+            recording = recording === action ? null : action;
+            renderSettings();
           },
         }),
       ),
@@ -924,6 +996,31 @@ async function init(): Promise<void> {
     void loadFromDisk();
   });
   document.addEventListener("keydown", (e) => {
+    if (recording === null) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.code === "Escape") {
+      recording = null;
+      renderSettings();
+      return;
+    }
+    const combo = comboFrom(e);
+    if (combo === null) {
+      return; // a modifier on its own: keep waiting for the key
+    }
+    const action = recording;
+    recording = null;
+    state.config.hotkeys[action] = combo;
+    changed();
+    renderSettings();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (recording !== null) {
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
       void save();
