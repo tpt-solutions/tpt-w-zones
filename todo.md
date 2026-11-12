@@ -79,7 +79,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 
 ## Phase 7 — Packaging, Distribution & Polish
 
-- [ ] Build Windows installer (MSI) + winget manifest
+- [ ] Build Windows installer (MSI) + winget manifest (MSI and release workflow done; see docs/releasing.md; winget pending)
 - [ ] Build Linux packages (AppImage/Flatpak, or distro-specific packages)
 - [ ] Implement auto-update mechanism
 - [ ] Implement opt-in crash reporting/telemetry (local reports done: docs/crash-reports.md; sending pending)

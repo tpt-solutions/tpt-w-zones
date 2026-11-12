@@ -1,0 +1,84 @@
+name: Release
+
+# Builds the Windows installers when a version tag (v0.1.0, v0.2.0-rc1, ...) is pushed,
+# and attaches them to a GitHub Release. Signing is optional: it runs only when the
+# TAURI_SIGNING_PRIVATE_KEY secret exists, so unsigned test builds still work.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installers
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/editor/package-lock.json
+
+      - name: Install editor dependencies
+        working-directory: apps/editor
+        run: npm ci
+
+      - name: Check that the tag matches the crate version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(grep -m1 '^version' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ "$tag" != "$version" ]; then
+            echo "tag v$tag does not match workspace version $version" >&2
+            exit 1
+          fi
+
+      - name: Build installers
+        working-directory: apps/editor
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri build
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          cp target/release/bundle/msi/*.msi release-assets/
+          cp target/release/bundle/nsis/*-setup.exe release-assets/
+          # Signature files are produced only when signing is configured.
+          for f in target/release/bundle/nsis/*-setup.exe.sig target/release/bundle/msi/*.msi.sig; do
+            [ -f "$f" ] && cp "$f" release-assets/ || true
+          done
+          ls -la release-assets
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release-assets/*
+
+      - name: Keep the build artifacts for manual testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: release-assets/*
+          if-no-files-found: error
