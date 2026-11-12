@@ -41,14 +41,13 @@ sees keystrokes that are not registered hotkeys.
 Limit: `RegisterHotKey` is per-user. A hotkey cannot fire while an elevated window has focus
 unless the service itself is elevated, which it deliberately is not.
 
-### 3. Requests that change state (mitigated)
+### 3. Requests that change state (fixed)
 
-`snap_window` and `reload_config` change state. Access is limited by finding 1: only the
-owning user, Administrators and SYSTEM can send them. The server does not yet check the
-protocol access levels in `zones-archon-bridge::access_for`. That check should be added when
-the bridge is wired in, so that a future read-only client cannot send `snap_window`.
-
-Mitigation until then: the pipe access list (finding 1).
+`snap_window` and `reload_config` change state. Every request is now checked against the
+client's grant (`zones_core::access::authorise`) before it is forwarded, including `subscribe`.
+The pipe server takes a `Grant`; the service passes `Grant::full()` because the pipe ACL already
+limits clients to the owning user. An observer-only grant is covered by an ignored test that
+connects over the real pipe and confirms a snap is refused while a listing succeeds.
 
 ### 4. Config parsing (fixed by design)
 
@@ -92,7 +91,6 @@ They take the configuration from the webview, so the webview is trusted code. Th
 
 ## Open items
 
-- Add the protocol access check (`access_for`) to the pipe server (finding 3).
 - Run the second-user test for finding 1 on a Windows machine with two accounts.
 - Review the Linux backend when it exists: D-Bus and compositor access will be new surfaces.
 - Telemetry and crash reporting are not implemented. If added, they must be opt-in and

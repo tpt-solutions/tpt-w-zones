@@ -28,6 +28,7 @@ use windows::Win32::System::Pipes::{
     ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe, PIPE_READMODE_BYTE, PIPE_TYPE_BYTE,
     PIPE_UNLIMITED_INSTANCES, PIPE_WAIT,
 };
+use zones_core::access::{authorise, Grant};
 use zones_core::backend::WindowEvent;
 use zones_core::ipc::{self, Request, Response, PROTOCOL_VERSION};
 use zones_core::{Error, Result};
@@ -50,14 +51,14 @@ pub enum ClientMsg {
 ///
 /// # Errors
 /// Returns [`Error::Backend`] if the accept thread cannot be started.
-pub fn serve(to_service: Sender<ClientMsg>) -> Result<JoinHandle<()>> {
+pub fn serve(to_service: Sender<ClientMsg>, grant: Grant) -> Result<JoinHandle<()>> {
     std::thread::Builder::new()
         .name("zones-win-pipe".into())
-        .spawn(move || accept_loop(&to_service))
+        .spawn(move || accept_loop(&to_service, grant))
         .map_err(|e| Error::Backend(e.to_string()))
 }
 
-fn accept_loop(to_service: &Sender<ClientMsg>) {
+fn accept_loop(to_service: &Sender<ClientMsg>, grant: Grant) {
     let name: Vec<u16> = PIPE_NAME.encode_utf16().chain(std::iter::once(0)).collect();
     let security = match pipe_security() {
         Ok(sa) => sa,
@@ -101,7 +102,7 @@ fn accept_loop(to_service: &Sender<ClientMsg>) {
         let to = to_service.clone();
         if let Err(e) = std::thread::Builder::new()
             .name("zones-win-pipe-client".into())
-            .spawn(move || handle_client(file, &to))
+            .spawn(move || handle_client(file, &to, grant))
         {
             tracing::warn!(error = %e, "could not start client thread");
         }
@@ -152,8 +153,8 @@ fn close(handle: HANDLE) {
     let _ = unsafe { CloseHandle(handle) };
 }
 
-fn handle_client(mut file: File, to_service: &Sender<ClientMsg>) {
-    if let Err(e) = session(&mut file, to_service) {
+fn handle_client(mut file: File, to_service: &Sender<ClientMsg>, grant: Grant) {
+    if let Err(e) = session(&mut file, to_service, grant) {
         tracing::debug!(error = %e, "client session ended");
     }
     // SAFETY: the raw handle belongs to `file`, which is still alive; disconnecting
@@ -161,7 +162,7 @@ fn handle_client(mut file: File, to_service: &Sender<ClientMsg>) {
     let _ = unsafe { DisconnectNamedPipe(HANDLE(file.as_raw_handle())) };
 }
 
-fn session(file: &mut File, to_service: &Sender<ClientMsg>) -> io::Result<()> {
+fn session(file: &mut File, to_service: &Sender<ClientMsg>, grant: Grant) -> io::Result<()> {
     let reader = file.try_clone()?;
     let mut lines = BufReader::new(reader).lines();
 
@@ -216,6 +217,11 @@ fn session(file: &mut File, to_service: &Sender<ClientMsg>) -> io::Result<()> {
             }
         };
 
+        if let Err(message) = authorise(grant, &request) {
+            write_response(file, &Response::Error { message })?;
+            continue;
+        }
+
         if let Request::Subscribe = request {
             return stream_events(file, to_service);
         }
@@ -266,4 +272,72 @@ fn write_response(file: &mut File, response: &Response) -> io::Result<()> {
     file.write_all(line.as_bytes())?;
     file.write_all(b"\n")?;
     file.flush()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::OpenOptions;
+    use std::io::{BufRead, BufReader, Write};
+    use std::time::Duration;
+
+    use zones_core::access::Grant;
+    use zones_core::backend::WindowId;
+    use zones_core::ipc::{self, Request, Response, PROTOCOL_VERSION};
+    use zones_core::model::ZoneId;
+
+    /// Starts a server that only grants observation, with a stub service behind it.
+    /// Requires that no tpt-zones service is already running (it uses the same pipe name).
+    #[test]
+    #[ignore = "uses the real pipe name; stop any running service first"]
+    fn observer_grant_refuses_management_requests() {
+        let (tx, rx) = std::sync::mpsc::channel::<super::ClientMsg>();
+        std::thread::spawn(move || {
+            for msg in rx {
+                if let super::ClientMsg::Request(request, reply) = msg {
+                    let response = match request {
+                        Request::ListWindows => Response::Windows { windows: vec![] },
+                        _ => Response::Error {
+                            message: "stub service reached".into(),
+                        },
+                    };
+                    let _ = reply.send(response);
+                }
+            }
+        });
+        let _server = super::serve(tx, Grant::observer()).expect("serve");
+        std::thread::sleep(Duration::from_millis(300));
+
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(super::PIPE_NAME)
+            .expect("connect");
+        let mut lines = BufReader::new(file.try_clone().expect("clone")).lines();
+        let mut send = |req: &Request| {
+            writeln!(file, "{}", ipc::encode(req).unwrap()).unwrap();
+            let line = lines.next().expect("reply").expect("read");
+            ipc::decode::<Response>(&line).unwrap()
+        };
+
+        let hello = send(&Request::Hello {
+            client: "test".into(),
+            protocol: PROTOCOL_VERSION,
+        });
+        assert!(matches!(hello, Response::Hello { .. }));
+
+        let snap = send(&Request::SnapWindow {
+            window: WindowId(1),
+            layout: "halves".into(),
+            zone: ZoneId("left".into()),
+        });
+        match snap {
+            Response::Error { message } => assert!(message.contains("access denied"), "{message}"),
+            other => panic!("snap should be refused, got {other:?}"),
+        }
+
+        assert!(matches!(
+            send(&Request::ListWindows),
+            Response::Windows { .. }
+        ));
+    }
 }

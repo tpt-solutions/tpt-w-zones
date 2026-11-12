@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Duration;
 
+use zones_core::access::Grant;
 use zones_core::actions::Action;
 use zones_core::backend::{HotkeyBackend, Subscription, WindowBackend, WindowEvent, WindowId};
 use zones_core::config::Config;
@@ -58,7 +59,9 @@ pub fn run(config_path: PathBuf) -> Result<()> {
     }))?;
 
     let (client_tx, client_rx) = mpsc::channel::<ClientMsg>();
-    let _pipe = pipe::serve(client_tx)?;
+    // The pipe ACL admits only the owning user, so connected clients are trusted with full access.
+    // A narrower grant (observer-only) can be passed here without other changes.
+    let _pipe = pipe::serve(client_tx, Grant::full())?;
     spawn_forwarder(client_rx, tx.clone());
 
     // The tray is a convenience: if it cannot start, the service still runs.

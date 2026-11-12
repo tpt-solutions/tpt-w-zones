@@ -1,0 +1,6 @@
+# Keep text files LF in the repo and in every checkout (including Windows
+# checkouts with core.autocrlf=true), matching .editorconfig and rustfmt.toml.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
