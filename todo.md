@@ -85,7 +85,7 @@ Archon integration later. Dual-licensed MIT OR Apache-2.0. TPT Solutions.
 - [ ] Implement opt-in crash reporting/telemetry
 - [ ] Build documentation site (usage, config reference, FAQ)
 - [ ] Benchmark latency/performance vs. FancyZones and komorebi
-- [ ] Accessibility pass on editor UI
+- [x] Accessibility pass on editor UI (keyboard zone list, tab ARIA links, focus rings, WCAG AA contrast checked; screen-reader testing not done)
 - [ ] Security review (hotkey/input hooking, IPC surface)
 
 ## Phase 8 — Launch

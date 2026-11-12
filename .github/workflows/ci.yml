@@ -37,6 +37,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev
 
+      # The editor's Windows-only tauri.windows.conf.json bundles
+      # target/release/tpt-zones-cli.exe, and tauri-build fails the workspace
+      # build if it is missing. Build it first on Windows.
+      - name: Build CLI for editor bundling (Windows)
+        if: runner.os == 'Windows'
+        run: cargo build --release -p zones-cli
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 

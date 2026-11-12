@@ -261,6 +261,25 @@ function renderZoneForm(): void {
     host.replaceChildren();
     return;
   }
+  // A keyboard and screen-reader alternative to clicking zones on the canvas.
+  const zoneList = h(
+    "ul",
+    { className: "zone-list", "aria-label": "Zones in this layout" },
+    ...layout.zones.map((z) =>
+      h(
+        "li",
+        {},
+        h("button", {
+          className: z.id === zone?.id ? "item active" : "item",
+          "aria-pressed": String(z.id === zone?.id),
+          text: z.name,
+          onclick: () => {
+            canvas.select(z.id);
+          },
+        }),
+      ),
+    ),
+  );
   if (!zone) {
     host.replaceChildren(
       h("p", {
@@ -299,6 +318,7 @@ function renderZoneForm(): void {
     );
 
   host.replaceChildren(
+    zoneList,
     h(
       "div",
       { className: "zone-fields" },
