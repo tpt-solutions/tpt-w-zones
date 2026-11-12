@@ -1,6 +1,6 @@
 [package]
 name = "zones-linux"
-description = "Linux (Wayland) backend for tpt-zones (GNOME and KDE)"
+description = "Linux (Wayland) backend for tpt-zones (GNOME, KDE and wlroots adapters)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,8 @@ repository.workspace = true
 
 [dependencies]
 zones-core = { path = "../zones-core" }
+serde.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

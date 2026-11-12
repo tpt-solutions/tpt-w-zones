@@ -59,3 +59,14 @@ and run in a dedicated CI job.
 - Which minimum desktop versions do we support? GlobalShortcuts availability sets this.
 - Can a KWin script place windows on all virtual desktops, or only the current one?
 - Does the portal's GlobalShortcuts API work in a sandboxed (Flatpak) build?
+
+## Status (implementation)
+
+- `zones-linux::desktop`: detects KDE, GNOME, wlroots, other or unknown from the environment. Tested.
+- `zones-linux::kwin`: parses the output and window records a KWin script would emit, and
+  builds the place command. Tested with fixture JSON.
+- `zones-linux::LinuxBackend`: implements the core window traits over a `Transport`. Tested with
+  a fake transport.
+- **Not done:** the real transport. Until one exists, every desktop-facing call returns an error
+  that names the desktop. The KWin script and the D-Bus connection are the next step, and they
+  need a KDE session to test. CI compiles and tests the crate on Linux but cannot run KWin.
