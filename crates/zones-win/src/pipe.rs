@@ -16,7 +16,13 @@ use std::sync::mpsc::{self, Sender};
 use std::thread::JoinHandle;
 
 use windows::core::PCWSTR;
-use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_PIPE_CONNECTED, HANDLE};
+use windows::Win32::Foundation::{
+    CloseHandle, GetLastError, LocalFree, ERROR_PIPE_CONNECTED, HANDLE, HLOCAL,
+};
+use windows::Win32::Security::Authorization::{
+    ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+};
+use windows::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
 use windows::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX;
 use windows::Win32::System::Pipes::{
     ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe, PIPE_READMODE_BYTE, PIPE_TYPE_BYTE,
@@ -53,6 +59,13 @@ pub fn serve(to_service: Sender<ClientMsg>) -> Result<JoinHandle<()>> {
 
 fn accept_loop(to_service: &Sender<ClientMsg>) {
     let name: Vec<u16> = PIPE_NAME.encode_utf16().chain(std::iter::once(0)).collect();
+    let security = match pipe_security() {
+        Ok(sa) => sa,
+        Err(e) => {
+            tracing::error!(error = %e, "cannot build pipe security; not serving clients");
+            return;
+        }
+    };
     loop {
         // SAFETY: `name` is a NUL-terminated wide string that outlives the call; the other
         // arguments are plain values, and a null security descriptor is allowed.
@@ -65,7 +78,7 @@ fn accept_loop(to_service: &Sender<ClientMsg>) {
                 64 * 1024,
                 64 * 1024,
                 0,
-                None,
+                Some(&security.attributes),
             )
         };
         if handle.is_invalid() {
@@ -93,6 +106,45 @@ fn accept_loop(to_service: &Sender<ClientMsg>) {
             tracing::warn!(error = %e, "could not start client thread");
         }
     }
+}
+
+/// Access list for the pipe: the creating user, Administrators and SYSTEM. Other local users
+/// are denied, so the pipe is not a way to move windows or reload config for someone else.
+const PIPE_SDDL: PCWSTR = windows::core::w!("D:(A;;GA;;;OW)(A;;GA;;;BA)(A;;GA;;;SY)");
+
+struct PipeSecurity {
+    attributes: SECURITY_ATTRIBUTES,
+    descriptor: PSECURITY_DESCRIPTOR,
+}
+
+impl Drop for PipeSecurity {
+    fn drop(&mut self) {
+        // SAFETY: the descriptor was allocated by ConvertStringSecurityDescriptorToSecurityDescriptorW,
+        // which requires LocalFree, and it is freed exactly once here.
+        let _ = unsafe { LocalFree(Some(HLOCAL(self.descriptor.0))) };
+    }
+}
+
+fn pipe_security() -> Result<PipeSecurity> {
+    let mut descriptor = PSECURITY_DESCRIPTOR::default();
+    // SAFETY: the SDDL string is static and NUL-terminated; the output pointer is a valid local.
+    unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            PIPE_SDDL,
+            SDDL_REVISION_1,
+            &mut descriptor,
+            None,
+        )
+    }
+    .map_err(|e| Error::Backend(format!("building pipe security descriptor: {e}")))?;
+    Ok(PipeSecurity {
+        attributes: SECURITY_ATTRIBUTES {
+            nLength: u32::try_from(std::mem::size_of::<SECURITY_ATTRIBUTES>()).unwrap_or(0),
+            lpSecurityDescriptor: descriptor.0,
+            bInheritHandle: false.into(),
+        },
+        descriptor,
+    })
 }
 
 fn close(handle: HANDLE) {

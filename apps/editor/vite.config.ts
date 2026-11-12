@@ -11,7 +11,7 @@ export default defineConfig({
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
     target: "es2021",
-    outDir: "../dist",
+    outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
   },
